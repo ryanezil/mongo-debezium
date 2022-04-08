@@ -319,7 +319,7 @@ $ oc port-forward example-mongodb-0 27017:27017 -n mongodb
             "subfield2" : "value 2-2"
         }        
     ],
-    "field3" : UUID("4a0e22f4-4687-451f-9738-60fd09eb0bd7")
+    "field3" : "4a0e22f4-4687-451f-9738-60fd09eb0bd7"
 }
 ```
 
@@ -330,7 +330,7 @@ The last step is to deploy a new Kafka Connector configured to start with Mongo 
 
 The provided file example is configured as follows:
 
-* It checks ```demodb`` database ONLY.
+* It checks ```demodb``` database ONLY.
 * It will register the schema in Service Registry using AVRO
 * CDC events are serialized to Kafka topics using AVRO
 
