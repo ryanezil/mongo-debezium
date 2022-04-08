@@ -1,0 +1,89 @@
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnect
+metadata:
+  name: my-connect-single-node-cluster
+  annotations:
+  # use-connector-resources configures this KafkaConnect
+  # to use KafkaConnector resources to avoid
+  # needing to call the Connect REST API directly
+    strimzi.io/use-connector-resources: "true"
+spec:
+  version: 2.8.0
+  build:
+    output:
+      # Use type 'docker' to push built image into a container registry like Docker Hub or Quay
+      type: imagestream
+      image: my-kafka-connect-image:0.0.1
+    plugins:
+    - name: debezium-connector-mongodb
+      artifacts:
+      - type: zip
+        url: https://maven.repository.redhat.com/ga/io/debezium/debezium-connector-mongodb/1.7.2.Final-redhat-00003/debezium-connector-mongodb-1.7.2.Final-redhat-00003-plugin.zip
+        sha512sum: ec248e92fc1e73dd40299c37733f6d9369cb19dc72ba1cc4193528805e347031e7034cdde6a776b1af0bdf7912f94c656672aced48e77b6f4e05b34f13cc14f5
+    - name: debezium-converters
+      artifacts:
+      - type: zip
+        url: https://maven.repository.redhat.com/ga/io/apicurio/apicurio-registry-distro-connect-converter/2.0.3.Final-redhat-00002/apicurio-registry-distro-connect-converter-2.0.3.Final-redhat-00002.zip
+        sha512sum: a7c9b17ff840a11b5ee1d69e89754dc0ad588a0b8d089c57af079b2160f07b1f3801fdfdf5ba39df3559fe987d4dbce062a772016f62528e3f07ae32a3746555
+
+
+  replicas: 1
+  bootstrapServers: single-node-cluster-kafka-bootstrap:9093
+  authentication:
+    type: scram-sha-512
+    username: superuser
+    passwordSecret:
+      secretName: superuser
+      password: password
+  tls:
+    trustedCertificates:
+      - secretName: single-node-cluster-cluster-ca-cert
+        certificate: ca.crt
+  config:
+    group.id: my-kconnect-cluster-groupid
+    # Default value is TRUE when topic autocreation is not set:
+    topic.creation.enable: "true"
+    offset.storage.topic: connect-cluster-offsets
+    config.storage.topic: connect-cluster-configs
+    status.storage.topic: connect-cluster-status
+    config.storage.replication.factor: 1
+    offset.storage.replication.factor: 1
+    status.storage.replication.factor: 1
+
+    # External provider for reading secrets from file in KafkaConnectors
+    # TODO: Check if the following 'config.providers' properties are needed
+    # to access external-mounted configuration files from KafkaConnectors or
+    # the 'file' provider is enabled by default
+    config.providers: file
+    config.providers.file.class: org.apache.kafka.common.config.provider.FileConfigProvider
+
+  externalConfiguration:
+    volumes:
+      - name: mongodb-connector-config
+        secret:
+          secretName: myuser-credentials
+
+  logging:
+#    type: external
+#    valueFrom:
+#      configMapKeyRef:
+#        name: logging-config-cm
+#        key: logging.properties
+    type: inline
+    loggers:
+      log4j.rootLogger: INFO
+      log4j.logger.io.debezium.connector.mongodb: TRACE
+  resources:
+#    requests:
+#      cpu: 500m
+#      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  readinessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 30
+  livenessProbe:
+    initialDelaySeconds: 120
+    timeoutSeconds: 30

@@ -1,0 +1,49 @@
+---
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: example-mongodb
+spec:
+  members: 1
+  type: ReplicaSet
+  version: "4.2.6"
+  security:
+    authentication:
+      modes: ["SCRAM"]
+  users:
+    - name: myuser
+      db: admin
+      passwordSecretRef: # a reference to the secret that will be used to generate the user's password
+        name: myuser-credentials
+      roles:
+        - db: admin
+          name: root
+      scramCredentialsSecretName: myuser-scram-credentials
+  additionalMongodConfig:
+    storage.wiredTiger.engineConfig.journalCompressor: zlib
+#  exposedExternally: true
+  statefulSet:
+    spec:
+      serviceName: example-openshift-mongodb-svc
+      selector: {}
+      template:
+        spec:
+          # resources can be specified by applying an override
+          # per container name.
+          containers:
+            - name: mongod
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 1024M
+                requests:
+                  cpu: 150m
+                  memory: 128M
+            - name: mongodb-agent
+              resources:
+                limits:
+                  cpu: 250m
+                  memory: 512M
+                requests:
+                  cpu: 150m
+                  memory: 128M

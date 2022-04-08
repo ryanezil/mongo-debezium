@@ -1,0 +1,20 @@
+apiVersion: registry.apicur.io/v1
+kind: ApicurioRegistry
+metadata:
+  name: dbz-apicurioregistry-kafkasql
+spec:
+  configuration:
+    persistence: "kafkasql"
+    logLevel: INFO
+    kafkasql:
+      bootstrapServers: "single-node-cluster-kafka-bootstrap:9093"
+      security:
+        scram:
+          truststoreSecretName: single-node-cluster-cluster-ca-cert
+          user: superuser
+          passwordSecretName: superuser
+    ui:
+      # Set Service Registry web console to read-only mode
+      readOnly: true
+  deployment:
+    replicas: 1

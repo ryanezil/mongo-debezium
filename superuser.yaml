@@ -1,0 +1,10 @@
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaUser
+metadata:
+  name: superuser
+  labels:
+    strimzi.io/cluster: single-node-cluster
+spec:
+  authentication:
+    type: scram-sha-512
+
