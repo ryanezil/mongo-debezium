@@ -9,14 +9,14 @@ It has been tested with the following versions:
 * Red Hat Service Registry 2.0.5
 * MongoDB Community 4.2.6
 
-The demo uses two different projects: one for Mongo database, and the other for AMQ Streams and related components (including Service Registry)
+The demo uses two different projects: one for Mongo database, and the other for AMQ Streams and related components (including Service Registry).
 
 ## 1. Create working namespaces
 
 ```bash
-$ oc new-project poc-mongo-dbz
+$ oc new-project mongodb
 
-$ oc new-project mongo
+$ oc new-project poc-mongo-dbz
 ```
 
 ## 2. Install Operators
@@ -237,12 +237,9 @@ The resulting file looks like:
 
 ### 6.2. Deploy Mongo Operator
 
-Create and configure a new project for deploying Mongo
+Create and configure a the project for deploying Mongo. Remember a project with name ```mongodb``` was created at the beginning.
 
 ```bash
-# New Mongo namespace
-$ oc new-project mongodb
-
 # INSTALL CRDs
 $ oc apply -f mongodb-kubernetes-operator/config/crd/bases/mongodbcommunity.mongodb.com_mongodbcommunity.yaml -n mongodb
 
