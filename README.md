@@ -50,7 +50,7 @@ $ oc apply -f superuser.yaml -n poc-mongo-dbz
 
 ### OPTIONAL: test Kafka Broker
 
-You can test your Kafka installation using Kafka producer and consumer scripts.
+You can test your Kafka installation by using Kafka producer and consumer scripts.
 
 
 ```bash
@@ -117,13 +117,13 @@ $ oc create -f myuser-credentials-secret.yaml -n poc-mongo-dbz
 # The target imagestream for the customized image
 $ oc create -f kafka-connect-is.yaml -n poc-mongo-dbz
 
-# Build Image and deploy Kafka Connect cluster (containing downloaded MongoDB connector plugin and converters)
+# Build Image and deploy Kafka Connect cluster (the image will contain downloaded MongoDB connector plugin and the converters)
 $ oc apply -f kafka-connect-single-node-with-build.yaml -n poc-mongo-dbz
 ```
 
 ### Review generated image
 
-Inside the new Kafka Connect POD you can find the included connector and converters here:
+Open a remote shell to the new Kafka Connect POD. Inside you can find the included connector and converters here:
 
 ```bash
 $ ls -la /opt/kafka/plugins/
@@ -286,50 +286,82 @@ $ oc create -f deploy-mongodb_cr.yaml -n mongodb
 mongodbcommunity.mongodbcommunity.mongodb.com/example-mongodb created
 ```
 
-```bash
-# Optional: forward port for remote access from your localhost using your favourite client
-$ oc port-forward example-mongodb-0 27017:27017 -n mongodb
+### 6.4 Run CamelK producer
 
-```
+A demo producer has been prepared to insert documents into MongoDB. The producer [MongoDocInserter.java](./camelk/MongoDocInserter.java) is implemented using [CamelK](https://access.redhat.com/documentation/en-us/red_hat_integration/2022.q2/html-single/getting_started_with_camel_k/index).
 
-### 6.4 Create Database and collections
+It will create a new database with name ```demodb``` and then it will insert sequential documents into the collection ```mycollection``` every 10 seconds.
 
-1. Connect to Mongo using:
-   * Auth database: admin
-   * SCRAM-SHA-256 auth mechanism
-   * user: myuser
-   * password: mypassword
-2. Create a new database with name ```demodb```
-3. Create a collection ```mycollection``` and populate with documents. Example document:
-
+Example: 
 ```json
 {
-    "field1" : "mydocument1",
-    "field2" : "test value",
-    "myarray" : [ 
-        {
-            "subfield1" : "value 1-1",
-            "subfield2" : "value 1-2"
-        },
-        {
-            "subfield1" : "value 2-1",
-            "subfield2" : "value 2-2"
-        }        
-    ],
-    "field3" : "4a0e22f4-4687-451f-9738-60fd09eb0bd7"
+    "username" : "Demo Name #0"
 }
 ```
+
+
+**NOTE**: [CamelK CLI - kamel](https://camel.apache.org/camel-k/1.9.x/cli/cli.html) must be installed in order to exec the following commands.
+
+Install CamelK operator using Kamel:
+
+```bash
+$ kamel install --maven-repository https://maven.repository.redhat.com/ga/
+```
+
+Deploy the producer CamelK route
+
+```bash
+$ kamel run ./camelk/MongoDocInserter.java -p quarkus.mongodb.connection-string=mongodb://myuser:mypassword@example-openshift-mongodb-svc.mongodb.svc.cluster.local:27017/admin
+```
+
+Inspect output logs:
+
+```bash
+$ kamel log mongo-doc-inserter
+
+  :
+  :
+  :
+
+[1] 2022-06-08 14:36:13,965 INFO  [org.apa.cam.com.mon.MongoDbEndpoint] (main) Initialising MongoDb endpoint: mongodb://camelMongoClient?collection=mycollection&database=demodb&operation=insert
+[1] 2022-06-08 14:36:13,988 INFO  [org.apa.cam.imp.eng.AbstractCamelContext] (main) Routes startup summary (total:1 started:1)
+[1] 2022-06-08 14:36:13,989 INFO  [org.apa.cam.imp.eng.AbstractCamelContext] (main)     Started route1 (timer://tick)
+[1] 2022-06-08 14:36:13,989 INFO  [org.apa.cam.imp.eng.AbstractCamelContext] (main) Apache Camel 3.11.5.fuse-800012-redhat-00004 (camel-1) started in 101ms (build:0ms init:70ms start:31ms)
+[1] 2022-06-08 14:36:14,002 INFO  [io.quarkus] (main) camel-k-integration 1.6.6 on JVM (powered by Quarkus 2.2.5.Final-redhat-00010) started in 4.420s.
+[1] 2022-06-08 14:36:14,003 INFO  [io.quarkus] (main) Profile prod activated.
+[1] 2022-06-08 14:36:14,003 INFO  [io.quarkus] (main) Installed features: [camel-bean, camel-core, camel-java-joor-dsl, camel-k-core, camel-k-runtime, camel-log, camel-mongodb, camel-timer, cdi, mongodb-client, smallrye-context-propagation]
+[1] 2022-06-08 14:36:14,989 INFO  [info] (Camel (camel-1) thread #0 - timer://tick) Exchange[ExchangePattern: InOnly, BodyType: String, Body: {"username":"Demo Name #0"}]
+[1] 2022-06-08 14:36:15,233 INFO  [org.mon.dri.connection] (Camel (camel-1) thread #0 - timer://tick) Opened connection [connectionId{localValue:5, serverValue:1362}] to example-openshift-mongodb-svc.mongodb.svc.cluster.local:27017
+[1] 2022-06-08 14:36:15,250 INFO  [route1] (Camel (camel-1) thread #0 - timer://tick) Document inserted!
+[1] 2022-06-08 14:36:24,983 INFO  [info] (Camel (camel-1) thread #0 - timer://tick) Exchange[ExchangePattern: InOnly, BodyType: String, Body: {"username":"Demo Name #1"}]
+[1] 2022-06-08 14:36:24,986 INFO  [route1] (Camel (camel-1) thread #0 - timer://tick) Document inserted!
+```
+
+### 6.5 [Optional]: Connect to MongoDB
+
+You can connect to MongoDB by using your favourite client. If you want to do it, a very simple way is to forward a local port to the remote port in the cluster and then configure yor connection details.
+
+```bash
+$ oc port-forward example-mongodb-0 27017:27017 -n mongodb
+```
+
+Connect to Mongo using:
+ * locahost:27017
+ * Auth database: admin
+ * SCRAM-SHA-256 auth mechanism
+ * user: myuser
+ * password: mypassword
 
 
 ## 7. Deploy Debezium Kafka Connector
 
 The last step is to deploy a new Kafka Connector configured to start with Mongo Debezium plugin.
 
-The provided file example is configured as follows:
+The provided connector example ([dbz-mongodb-connector-sr.yaml](./dbz-mongodb-connector-sr.yaml))is configured as follows:
 
 * It checks ```demodb``` database ONLY.
-* It will register the schema in Service Registry using AVRO
-* CDC events are serialized to Kafka topics using AVRO
+* It will register the schema in Service Registry using AVRO.
+* CDC events are serialized to Kafka topics using AVRO.
 
 ```bash
 # Deploy Debezium Connector
@@ -345,7 +377,49 @@ NAME                                 CLUSTER               PARTITIONS   REPLICAT
 mongo-dbz-demo.demodb.mycollection   single-node-cluster   1            1                    True
 ```
 
-Also, the schemas for *keys* and *values* has been created in Service Registry:
+Once the connector is running, it will detect every new document inserted into MongoDB and will insert an event into the new topic ```mongo-dbz-demo.demodb.mycollection```.
+
+
+### Check the inserted events
+
+You can use the script ```kafka-console-consumer.sh``` to read the inserted events from the topic:
+
+
+```bash
+# Get the superser password:
+$ SUPERUSER_PASS=$(oc get secret superuser --template='{{ .data.password }}' -n poc-mongo-dbz | base64 -d)
+
+# Start consuming messages from the Kafka topic:
+
+$ oc run kafka-consumer -ti --image=registry.redhat.io/amq7/amq-streams-kafka-28-rhel8:1.8.4-2 --rm=true --restart=Never -- /bin/bash -c "cat >/tmp/consumer.properties <<EOF 
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=SCRAM-SHA-512
+sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=superuser password=$SUPERUSER_PASS;
+EOF
+bin/kafka-console-consumer.sh --bootstrap-server single-node-cluster-kafka-bootstrap:9092 --topic mongo-dbz-demo.demodb.mycollection --from-beginning --consumer.config=/tmp/consumer.properties --group sample-group
+"
+```
+
+The console output will show entries like this (remember the messages are serialized and stored in the **binary** format AVRO):
+
+```bash
+�{"_id": {"$oid": "62a0beb3765e711c2abaa8cf"},"username": "Demo Name #56"}01.7.2.Final-redhat-00003mongodbmongo-dbz-demo�Ǿ�`
+false
+     demodbexample-mongodbmycollectionc�Ǿ�`
+```
+
+
+## 8. Check Service Registry
+
+The schemas for *keys* and *values* has been created in Service Registry by Debezium
+
+You can access to the Apicurio Console retrieving the URL from the route. Example:
+
+```bash
+oc get route dbz-apicurioregistry-kafkasql-ingress-z8slb -n poc-mongo-dbz --template='{{ .spec.host }}'
+```
+
+> **NOTE** the route name might change.
 
 ### Artifacts:
 

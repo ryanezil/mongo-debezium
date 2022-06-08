@@ -3,10 +3,10 @@ kind: Subscription
 metadata:
   name: service-registry-operator
 spec:
-  channel: 2.0.x
+  channel: 2.x
   installPlanApproval: Automatic
   name: service-registry-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace
-  startingCSV: service-registry-operator.v2.0.5-0.1648813064.p
+  startingCSV: service-registry-operator.v2.0.5-0.1654503709.p
 
